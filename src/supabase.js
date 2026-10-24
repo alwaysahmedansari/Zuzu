@@ -11,6 +11,7 @@ export const supabase = configured ? createClient(SUPABASE_URL, SUPABASE_KEY) : 
 // لاگ اِن صارف (نہ ہو تو null)
 export async function currentUser() {
   if (!supabase) return null;
-  const { data } = await supabase.auth.getSession();
+  const { data, error } = await supabase.auth.getSession();
+  if (error) throw error;
   return data.session?.user ?? null;
 }

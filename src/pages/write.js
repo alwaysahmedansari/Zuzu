@@ -1,5 +1,5 @@
 import { supabase, currentUser } from '../supabase.js';
-import { KINDS, esc, urduNum, readMinutes, resizeImage, extOf } from '../utils.js';
+import { KINDS, esc, urduNum, readMinutes, resizeImage, extOf, showLoadError } from '../utils.js';
 
 const DRAFT = 'zuzu-draft';
 const NOT_FOUND = '<p class="empty">یہ تحریر نہیں ملی۔<br><a class="tab on" href="#/">ہوم پر واپس</a></p>';
@@ -14,7 +14,12 @@ export async function write(root, editId) {
 
   let post = { kind: 'column', title: '', subtitle: '', body: '', cover_url: null, thumb_url: null };
   if (editId) {
-    const { data } = await supabase.from('posts').select('*').eq('id', editId).eq('author_id', user.id).maybeSingle();
+    const { data, error } = await supabase.from('posts').select('*').eq('id', editId).eq('author_id', user.id).maybeSingle();
+    if (error) {
+      console.error('[Supabase] Post edit lookup failed', error);
+      showLoadError(root, 'تحریر ترمیم کے لیے لوڈ نہیں ہو سکی۔ دوبارہ کوشش کریں۔', () => write(root, editId));
+      return;
+    }
     if (!data) {
       root.innerHTML = NOT_FOUND;
       return;
@@ -34,13 +39,13 @@ export async function write(root, editId) {
   ${Object.entries(KINDS).map(([k, t]) => `<button type="button" class="kind${k === post.kind ? ' on' : ''}" data-kind="${k}" role="radio" aria-checked="${k === post.kind}">${t}</button>`).join('')}
 </div>
 <label class="cover-pick">
-  <input id="file" type="file" accept="image/*" hidden>
+  <input id="file" type="file" accept="image/jpeg,image/png,image/webp" aria-label="مرکزی تصویر منتخب کریں" hidden>
   <img id="prev" class="cover" alt="" ${post.cover_url ? `src="${esc(post.cover_url)}"` : 'hidden'}>
   <span id="pickText">${post.cover_url ? 'تصویر بدلیں' : 'مرکزی تصویر لگائیں'}</span>
 </label>
-<input id="title" class="f-title" placeholder="سرخی" maxlength="150" value="${esc(post.title)}">
-<input id="sub" class="f-sub" placeholder="ذیلی سرخی (اختیاری)" maxlength="300" value="${esc(post.subtitle)}">
-<textarea id="body" class="f-body" placeholder="یہاں لکھیں…">${esc(post.body)}</textarea>
+<input id="title" class="f-title" aria-label="سرخی" placeholder="سرخی" maxlength="150" value="${esc(post.title)}">
+<input id="sub" class="f-sub" aria-label="ذیلی سرخی (اختیاری)" placeholder="ذیلی سرخی (اختیاری)" maxlength="300" value="${esc(post.subtitle)}">
+<textarea id="body" class="f-body" aria-label="تحریر کا متن" placeholder="یہاں لکھیں…">${esc(post.body)}</textarea>
 <p id="err" class="err" role="alert" hidden></p>
 <div class="actions">
   <button class="btn" id="pub" type="button">شائع کریں</button>
@@ -79,6 +84,11 @@ export async function write(root, editId) {
   $('#file').onchange = (e) => {
     file = e.target.files[0] || null;
     if (!file) return;
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      file = null;
+      e.target.value = '';
+      return fail('صرف JPEG، PNG یا WebP تصویر منتخب کریں۔');
+    }
     $('#prev').src = URL.createObjectURL(file);
     $('#prev').hidden = false;
     $('#pickText').textContent = 'تصویر بدلیں';
@@ -116,7 +126,7 @@ export async function write(root, editId) {
       }
       const row = { kind: s.kind, title: s.title.trim(), subtitle: s.subtitle.trim(), body: s.body, cover_url, thumb_url, read_min: readMinutes(s.body), published };
       const q = editId
-        ? supabase.from('posts').update(row).eq('id', editId).select('id').single()
+        ? supabase.from('posts').update(row).eq('id', editId).eq('author_id', user.id).select('id').single()
         : supabase.from('posts').insert({ ...row, author_id: user.id }).select('id').single();
       const { data, error } = await q;
       if (error) throw error;
@@ -127,8 +137,8 @@ export async function write(root, editId) {
       }
       location.hash = `#/read/${data.id}`;
     } catch (err) {
-      console.error(err);
-      fail('محفوظ نہیں ہو سکا۔ انٹرنیٹ اور تصویر دیکھ کر دوبارہ کوشش کریں۔');
+      console.error('[Supabase] Post save or cover upload failed', err);
+      fail('محفوظ نہیں ہو سکا۔ انٹرنیٹ، اجازت یا تصویر کی قسم/سائز دیکھ کر دوبارہ کوشش کریں۔');
       busy(false);
     }
   }

@@ -4,16 +4,26 @@ import { read } from './pages/read.js';
 import { write } from './pages/write.js';
 import { profile } from './pages/profile.js';
 import { login } from './pages/login.js';
+import { showLoadError } from './utils.js';
 
 const root = document.getElementById('app');
 
 function route() {
   const [, page, arg] = location.hash.split('/');
-  if (page === 'read') read(root, arg);
-  else if (page === 'write') write(root, arg);
-  else if (page === 'author') profile(root, arg);
-  else if (page === 'login') login(root);
-  else home(root, page === 'feed' ? arg || 'all' : 'all');
+  try {
+    const result = page === 'read' ? read(root, arg)
+      : page === 'write' ? write(root, arg)
+        : page === 'author' ? profile(root, arg)
+          : page === 'login' ? login(root)
+            : home(root, page === 'feed' ? arg || 'all' : 'all');
+    Promise.resolve(result).catch((err) => {
+      console.error('[Router] Page load failed', err);
+      showLoadError(root, 'صفحہ لوڈ نہیں ہو سکا۔ دوبارہ کوشش کریں۔', route);
+    });
+  } catch (err) {
+    console.error('[Router] Page render failed', err);
+    showLoadError(root, 'صفحہ لوڈ نہیں ہو سکا۔ دوبارہ کوشش کریں۔', route);
+  }
   window.scrollTo(0, 0);
 }
 

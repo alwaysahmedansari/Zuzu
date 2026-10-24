@@ -1,5 +1,5 @@
 import { supabase, currentUser } from '../supabase.js';
-import { KINDS, esc, readTime, formatDate } from '../utils.js';
+import { KINDS, esc, readTime, formatDate, showLoadError } from '../utils.js';
 import { openShareCard } from '../components/share-card.js';
 
 const NOT_FOUND = '<p class="empty">یہ تحریر نہیں ملی۔<br><a class="tab on" href="#/">ہوم پر واپس</a></p>';
@@ -21,10 +21,16 @@ function excerptOf(p) {
 export async function read(root, id) {
   picked = '';
   root.innerHTML = '<p class="empty">لوڈ ہو رہا ہے…</p>';
-  const [{ data: p }, user] = await Promise.all([
+  const [postResult, user] = await Promise.all([
     supabase.from('posts').select('*,profiles!posts_author_id_fkey(pen_name)').eq('id', id).maybeSingle(),
     currentUser(),
   ]);
+  if (postResult.error) {
+    console.error('[Supabase] Post query failed', postResult.error);
+    showLoadError(root, 'تحریر لوڈ نہیں ہو سکی۔ انٹرنیٹ یا اجازت دیکھ کر دوبارہ کوشش کریں۔', () => read(root, id));
+    return;
+  }
+  const p = postResult.data;
   if (!p) {
     root.innerHTML = NOT_FOUND;
     return;
@@ -60,7 +66,10 @@ export async function read(root, id) {
     del.onclick = async () => {
       if (!confirm('یہ تحریر مستقل طور پر حذف ہو جائے گی۔ جاری رکھیں؟')) return;
       const { error } = await supabase.from('posts').delete().eq('id', p.id);
-      if (error) alert('حذف نہیں ہو سکی۔ دوبارہ کوشش کریں۔');
+      if (error) {
+        console.error('[Supabase] Post deletion failed', error);
+        alert('حذف نہیں ہو سکی۔ اجازت یا انٹرنیٹ دیکھ کر دوبارہ کوشش کریں۔');
+      }
       else location.hash = '#/author/me';
     };
   }
