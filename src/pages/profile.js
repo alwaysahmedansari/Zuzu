@@ -1,5 +1,5 @@
 import { supabase, currentUser } from '../supabase.js';
-import { esc } from '../utils.js';
+import { esc, showLoadError } from '../utils.js';
 import { card } from '../components/card.js';
 
 export async function profile(root, arg) {
@@ -11,7 +11,7 @@ export async function profile(root, arg) {
     return;
   }
   root.innerHTML = '<p class="empty">لوڈ ہو رہا ہے…</p>';
-  const [{ data: prof }, { data: posts }] = await Promise.all([
+  const [profileResult, postsResult] = await Promise.all([
     supabase.from('profiles').select('id,pen_name,bio').eq('id', id).maybeSingle(),
     supabase
       .from('posts')
@@ -20,6 +20,14 @@ export async function profile(root, arg) {
       .order('created_at', { ascending: false })
       .limit(50),
   ]);
+  if (profileResult.error) {
+    console.error('[Supabase] Profile query failed', profileResult.error);
+    showLoadError(root, 'مصنف کا پروفائل لوڈ نہیں ہو سکا۔ دوبارہ کوشش کریں۔', () => profile(root, arg));
+    return;
+  }
+  if (postsResult.error) console.error('[Supabase] Author posts query failed', postsResult.error);
+  const prof = profileResult.data;
+  const posts = postsResult.data;
   if (!prof) {
     root.innerHTML = '<p class="empty">یہ مصنف نہیں ملے۔<br><a class="tab on" href="#/">ہوم پر واپس</a></p>';
     return;
@@ -45,7 +53,11 @@ export async function profile(root, arg) {
     <button class="btn" type="submit">محفوظ کریں</button>
   </form>` : ''}
 </section>
-<section>${(posts || []).map(card).join('') || '<p class="empty">ابھی کوئی تحریر نہیں۔</p>'}</section>`;
+<section>${postsResult.error
+      ? '<p class="empty" role="alert">مصنف کی تحریریں لوڈ نہیں ہو سکیں۔ <button class="link" id="retry-posts" type="button">دوبارہ کوشش کریں</button></p>'
+      : (posts || []).map(card).join('') || '<p class="empty">ابھی کوئی تحریر نہیں۔</p>'}</section>`;
+
+  root.querySelector('#retry-posts')?.addEventListener('click', () => profile(root, arg));
 
   if (!mine) return;
   root.querySelector('#edit').onclick = () => {
@@ -53,7 +65,11 @@ export async function profile(root, arg) {
     f.hidden = !f.hidden;
   };
   root.querySelector('#out').onclick = async () => {
-    await supabase.auth.signOut();
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('[Supabase] Sign-out failed', error);
+      return;
+    }
     location.hash = '#/';
   };
   root.querySelector('#pf').onsubmit = async (e) => {
@@ -72,7 +88,8 @@ export async function profile(root, arg) {
       err.hidden = false;
       return;
     }
-    await supabase.auth.updateUser({ data: { pen_name: pen } });
+    const { error: authError } = await supabase.auth.updateUser({ data: { pen_name: pen } });
+    if (authError) console.error('[Supabase] Profile name updated but session metadata refresh failed', authError);
     profile(root, 'me');
   };
 }

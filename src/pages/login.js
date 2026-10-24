@@ -53,9 +53,17 @@ export async function login(root) {
     if (signup && (pen.length < 2 || pen.length > 40)) return show('تخلص 2 سے 40 حروف کا ہونا چاہیے۔');
 
     btn.disabled = true;
-    const { data, error } = signup
-      ? await supabase.auth.signUp({ email, password, options: { data: { pen_name: pen } } })
-      : await supabase.auth.signInWithPassword({ email, password });
+    let data;
+    let error;
+    try {
+      ({ data, error } = signup
+        ? await supabase.auth.signUp({ email, password, options: { data: { pen_name: pen } } })
+        : await supabase.auth.signInWithPassword({ email, password }));
+    } catch (err) {
+      console.error('[Supabase] Authentication request failed', err);
+      btn.disabled = false;
+      return show('سروس سے رابطہ نہیں ہو سکا۔ انٹرنیٹ دیکھ کر دوبارہ کوشش کریں۔');
+    }
     btn.disabled = false;
 
     if (error) return show(explain(error.message));

@@ -1,10 +1,3 @@
-/* جمیل نوری کی فائل public/fonts/JameelNoori.woff2 میں رکھیں؛ نہ ملے تو Noto خود آ جاتا ہے */
-@font-face {
-  font-family: 'Jameel Noori Nastaleeq';
-  src: url('/fonts/JameelNoori.woff2') format('woff2');
-  font-display: swap;
-}
-
 :root {
   --ink: #14110f;
   --muted: #5f5f5f;
@@ -19,7 +12,7 @@ body {
   margin: 0;
   background: #fff;
   color: var(--ink);
-  font-family: 'Jameel Noori Nastaleeq', 'Noto Nastaliq Urdu', serif;
+  font-family: 'Noto Nastaliq Urdu', serif;
   font-size: 16px;
   line-height: 2;
 }

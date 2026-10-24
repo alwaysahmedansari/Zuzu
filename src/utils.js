@@ -25,6 +25,11 @@ export const esc = (s = '') =>
 
 export const readMinutes = (text) => Math.max(1, Math.round(text.trim().split(/\s+/).length / 180));
 
+export function showLoadError(root, message, retry) {
+  root.innerHTML = `<section class="empty" role="alert"><p>${esc(message)}</p><button class="btn ghost" id="retry-load" type="button">دوبارہ کوشش کریں</button></section>`;
+  root.querySelector('#retry-load')?.addEventListener('click', retry);
+}
+
 // تصویر کو فون ہی پر چھوٹا کر کے WebP (نہ ہو تو JPEG) بناتا ہے تاکہ مفت جگہ اور ٹریفک بچے
 export async function resizeImage(file, maxWidth, quality) {
   const bmp = await createImageBitmap(file);

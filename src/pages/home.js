@@ -1,5 +1,6 @@
 import { supabase, configured, currentUser } from '../supabase.js';
 import { card } from '../components/card.js';
+import { showLoadError } from '../utils.js';
 
 const PAGE = 10;
 const TABS = [['all', 'تازہ'], ['column', 'کالم'], ['article', 'مضامین'], ['story', 'افسانہ'], ['poetry', 'شاعری']];
@@ -43,20 +44,23 @@ export function home(root, kind = 'all') {
 <button id="more" class="more" hidden>مزید</button>
 <a class="fab" href="#/write" aria-label="نئی تحریر"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg></a>`;
 
-  currentUser().then((u) => {
-    const me = root.querySelector('#me');
-    if (!u || !me) return;
-    me.className = 'avatar';
-    me.href = '#/author/me';
-    me.setAttribute('aria-label', 'میرا پروفائل');
-    me.textContent = [...(u.user_metadata?.pen_name || 'ق')][0];
-  });
+  currentUser()
+    .then((u) => {
+      const me = root.querySelector('#me');
+      if (!u || !me) return;
+      me.className = 'avatar';
+      me.href = '#/author/me';
+      me.setAttribute('aria-label', 'میرا پروفائل');
+      me.textContent = [...(u.user_metadata?.pen_name || 'ق')][0];
+    })
+    .catch((err) => console.error('[Supabase] Could not read the current session', err));
 
   const feed = root.querySelector('#feed');
   const more = root.querySelector('#more');
   let from = 0;
 
   async function next() {
+    feed.querySelector('#feed-error')?.remove();
     more.disabled = true;
     try {
       const rows = await load(kind, from);
@@ -65,8 +69,12 @@ export function home(root, kind = 'all') {
       more.hidden = rows.length < PAGE;
       if (from === 0) feed.innerHTML = '<p class="empty">اس قسم میں ابھی کوئی تحریر نہیں۔<br><a class="tab on" href="#/write">پہلی تحریر لکھیں</a></p>';
     } catch (err) {
-      console.error(err);
-      feed.insertAdjacentHTML('beforeend', '<p class="empty">تحریریں لوڈ نہیں ہو سکیں۔ انٹرنیٹ دیکھ کر دوبارہ کوشش کریں۔</p>');
+      console.error('[Supabase] Feed query failed', err);
+      feed.insertAdjacentHTML(
+        'beforeend',
+        '<p id="feed-error" class="empty" role="alert">تحریریں لوڈ نہیں ہو سکیں۔ انٹرنیٹ یا اجازت دیکھ کر دوبارہ کوشش کریں۔<br><button class="link" id="retry-feed" type="button">دوبارہ کوشش کریں</button></p>'
+      );
+      feed.querySelector('#retry-feed').addEventListener('click', next);
     }
     more.disabled = false;
   }

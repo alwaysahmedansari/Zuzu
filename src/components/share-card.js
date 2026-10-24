@@ -1,7 +1,7 @@
 // شیئر کارڈ: سفید تصویر (1080×1350) جس پر اقتباس، مصنف کا نام اور "Zuzu پر لکھا گیا"
 const W = 1080;
 const H = 1350;
-const FONT = '"Jameel Noori Nastaleeq","Noto Nastaliq Urdu",serif';
+const FONT = '"Noto Nastaliq Urdu",serif';
 const INK = '#14110f';
 const ACCENT = '#d2492f';
 const MUTED = '#5f5f5f';
@@ -26,7 +26,7 @@ function wrap(ctx, text, maxWidth) {
 
 async function draw({ text, author }) {
   await Promise.all(
-    ['48px "Jameel Noori Nastaleeq"', '48px "Noto Nastaliq Urdu"', '600 48px Fredoka'].map((f) => document.fonts.load(f).catch(() => {}))
+    ['48px "Noto Nastaliq Urdu"', '600 48px Fredoka'].map((f) => document.fonts.load(f).catch(() => {}))
   );
   const c = document.createElement('canvas');
   c.width = W;
