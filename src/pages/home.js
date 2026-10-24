@@ -25,7 +25,7 @@ async function load(kind, from) {
   }
   let q = supabase
     .from('posts')
-    .select('id,kind,title,subtitle,cover_url,thumb_url,read_min,created_at,author_id,profiles(pen_name)')
+    .select('id,kind,title,subtitle,cover_url,thumb_url,read_min,created_at,author_id,profiles!posts_author_id_fkey(pen_name)')
     .eq('published', true)
     .order('created_at', { ascending: false })
     .range(from, from + PAGE - 1);

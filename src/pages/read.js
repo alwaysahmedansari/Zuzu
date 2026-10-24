@@ -22,7 +22,7 @@ export async function read(root, id) {
   picked = '';
   root.innerHTML = '<p class="empty">لوڈ ہو رہا ہے…</p>';
   const [{ data: p }, user] = await Promise.all([
-    supabase.from('posts').select('*,profiles(pen_name)').eq('id', id).maybeSingle(),
+    supabase.from('posts').select('*,profiles!posts_author_id_fkey(pen_name)').eq('id', id).maybeSingle(),
     currentUser(),
   ]);
   if (!p) {

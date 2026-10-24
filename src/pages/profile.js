@@ -15,7 +15,7 @@ export async function profile(root, arg) {
     supabase.from('profiles').select('id,pen_name,bio').eq('id', id).maybeSingle(),
     supabase
       .from('posts')
-      .select('id,kind,title,subtitle,cover_url,thumb_url,read_min,created_at,author_id,published,profiles(pen_name)')
+      .select('id,kind,title,subtitle,cover_url,thumb_url,read_min,created_at,author_id,published,profiles!posts_author_id_fkey(pen_name)')
       .eq('author_id', id)
       .order('created_at', { ascending: false })
       .limit(50),
