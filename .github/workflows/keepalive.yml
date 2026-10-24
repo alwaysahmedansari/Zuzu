@@ -1,0 +1,15 @@
+name: Keep Supabase awake
+
+# مفت پراجیکٹ ہفتہ بھر خاموش رہے تو رک جاتا ہے؛ یہ ہر تین دن بعد ایک ہلکی درخواست بھیجتا ہے
+on:
+  schedule:
+    - cron: '0 3 */3 * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -fsS "https://lxfanwizheeusndaomzh.supabase.co/rest/v1/posts?select=id&limit=1" \
+            -H "apikey: sb_publishable_mQhu9bMgrb2U3vS-h67nDQ_TaVS8VB2" > /dev/null
